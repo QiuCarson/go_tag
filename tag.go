@@ -2,7 +2,9 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 
@@ -54,21 +56,6 @@ type product_tag struct {
 	silhouette     string
 	quality_level  string
 }
-type tag_color struct {
-	id         int
-	produtc_id string
-	color      string
-}
-type tag_size struct {
-	id         int
-	produtc_id string
-	size       string
-}
-type tag_price struct {
-	id         int
-	produtc_id string
-	price      string
-}
 
 func init() {
 
@@ -80,8 +67,8 @@ func init() {
 	tag.fabric_type = []string{1: "纤维", 2: "涤纶", 3: "兔毛", 4: "绒布", 5: "缎"}
 	tag.quality_level = []string{1: "1星", 2: "2星", 3: "3星", 4: "4星", 5: "5星"}
 
-	//db, _ = sql.Open("mysql", "test:123456@tcp(127.0.0.1:3306)/demo3?charset=utf8")
-	db, _ = sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/demo?charset=utf8")
+	db, _ = sql.Open("mysql", "test:123456@tcp(127.0.0.1:3306)/demo3?charset=utf8")
+	//db, _ = sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/demo?charset=utf8")
 
 }
 
@@ -123,7 +110,8 @@ func tagHandle(w http.ResponseWriter, r *http.Request) {
 	}
 	//fmt.Println(product_tags)
 	//fmt.Println(reflect.TypeOf(get))
-	tagHtml(get, products, product_tags)
+	str := tagHtml(get, products, product_tags)
+	io.WriteString(w, str)
 }
 
 //--------
@@ -138,71 +126,275 @@ type tag_rs struct {
 	product product
 }
 
-func tagHtml(get func(string) string, p []product, pt []product_tag) {
-
+func tagHtml(get func(string) string, p []product, pt []product_tag) string {
+	th := map[string]map[string]int{}
 	//all:=[]interface{}
 	fmt.Println(get("color"))
+	tag_color_get := get("color")
+	tag_size_get := get("size")
+	tag_neckline_get := get("neckline")
+	tag_dresses_length_get := get("dresses_length")
+	tag_fabric_type_get := get("fabric_type")
+	tag_quality_level_get := get("quality_level")
 
-	th := map[string]map[string]int{}
-	th1 := map[string]int{}
-	th2 := map[string]int{}
-	th3 := map[string]int{}
-	c1 := get("color")
-	sc1 := strings.Split(c1, "_")
+	tag_color := map[string]int{}
+	tag_size := map[string]int{}
+	tag_neckline := map[string]int{}
+	tag_dresses_length := map[string]int{}
+	tag_fabric_type := map[string]int{}
+	tag_quality_level := map[string]int{}
 
-	//c2 := get("dresses_length")
-	//sc2 := strings.Split(c2, "_")
-	c3 := get("size")
-	sc3 := strings.Split(c3, "_")
+	tag_color_split := strings.Split(tag_color_get, "_")
+	tag_size_split := strings.Split(tag_size_get, "_")
+	tag_neckline_split := strings.Split(tag_neckline_get, "_")
+	tag_dresses_length_split := strings.Split(tag_dresses_length_get, "_")
+	tag_fabric_type_split := strings.Split(tag_fabric_type_get, "_")
+	tag_quality_level_split := strings.Split(tag_quality_level_get, "_")
+
+	var tag_bool_color, tag_bool_size, tag_bool_neckline, tag_bool_dresses_length, tag_bool_fabric, tag_bool_quality_level bool
 
 	for _, v := range pt {
-
+		//color
 		if v.color != "" {
-			e1 := false
-			if len(sc3) > 0 {
-				for _, v3 := range sc3 {
-
-					if v.size == v3 || v3 == "" {
-						e1 = true
-					}
+			tag_bool_size = false
+			for _, k := range tag_size_split {
+				if v.size == k || k == "" {
+					tag_bool_size = true
 				}
-			} else {
-				e1 = true
+			}
+			tag_bool_neckline = false
+			for _, k := range tag_neckline_split {
+				if v.neckline == k || k == "" {
+					tag_bool_neckline = true
+				}
+			}
+			tag_bool_dresses_length = false
+			for _, k := range tag_dresses_length_split {
+				if v.dresses_length == k || k == "" {
+					tag_bool_dresses_length = true
+				}
+			}
+			tag_bool_fabric = false
+			for _, k := range tag_fabric_type_split {
+				if v.fabric_type == k || k == "" {
+					tag_bool_fabric = true
+				}
+			}
+			tag_bool_quality_level = false
+			for _, k := range tag_quality_level_split {
+				if v.quality_level == k || k == "" {
+					tag_bool_quality_level = true
+				}
 			}
 
-			if e1 {
-				th1[v.color] = th1[v.color] + 1
+			if tag_bool_size && tag_bool_neckline && tag_bool_dresses_length && tag_bool_fabric && tag_bool_quality_level {
+				tag_color[v.color] = tag_color[v.color] + 1
 			}
 
 		}
+		//dresses_length
 		if v.dresses_length != "" {
-			th2[v.dresses_length] = th1[v.dresses_length] + 1
-		}
-		if v.size != "" {
-			e3 := false
-			if len(sc3) > 0 {
-				for _, v1 := range sc1 {
-
-					//os.Exit(-1)
-					if v.color == v1 || v1 == "" {
-						e3 = true
-						break
-					}
+			tag_bool_color = false
+			for _, k := range tag_color_split {
+				if v.color == k || k == "" {
+					tag_bool_color = true
 				}
-			} else {
-				e3 = true
+			}
+			tag_bool_neckline = false
+			for _, k := range tag_neckline_split {
+				if v.neckline == k || k == "" {
+					tag_bool_neckline = true
+				}
+			}
+			tag_bool_size = false
+			for _, k := range tag_size_split {
+				if v.color == k || k == "" {
+					tag_bool_size = true
+				}
+			}
+			tag_bool_fabric = false
+			for _, k := range tag_fabric_type_split {
+				if v.fabric_type == k || k == "" {
+					tag_bool_fabric = true
+				}
+			}
+			tag_bool_quality_level = false
+			for _, k := range tag_quality_level_split {
+				if v.quality_level == k || k == "" {
+					tag_bool_quality_level = true
+				}
+			}
+			if tag_bool_color && tag_bool_neckline && tag_bool_size && tag_bool_fabric && tag_bool_quality_level {
+				tag_dresses_length[v.dresses_length] = tag_dresses_length[v.dresses_length] + 1
 			}
 
-			if e3 {
-				th3[v.size] = th3[v.size] + 1
+		}
+		//size
+		if v.size != "" {
+			tag_bool_color = false
+			for _, k := range tag_color_split {
+				if v.color == k || k == "" {
+					tag_bool_color = true
+				}
 			}
+			tag_bool_neckline = false
+			for _, k := range tag_neckline_split {
+				if v.neckline == k || k == "" {
+					tag_bool_neckline = true
+				}
+			}
+			tag_bool_dresses_length = false
+			for _, k := range tag_dresses_length_split {
+				if v.dresses_length == k || k == "" {
+					tag_bool_dresses_length = true
+				}
+			}
+			tag_bool_fabric = false
+			for _, k := range tag_fabric_type_split {
+				if v.fabric_type == k || k == "" {
+					tag_bool_fabric = true
+				}
+			}
+			tag_bool_quality_level = false
+			for _, k := range tag_quality_level_split {
+				if v.quality_level == k || k == "" {
+					tag_bool_quality_level = true
+				}
+			}
+
+			if tag_bool_color && tag_bool_neckline && tag_bool_dresses_length && tag_bool_fabric && tag_bool_quality_level {
+				tag_size[v.size] = tag_size[v.size] + 1
+			}
+
+		}
+		//neckline
+		if v.neckline != "" {
+			tag_bool_color = false
+			for _, k := range tag_color_split {
+				if v.color == k || k == "" {
+					tag_bool_color = true
+				}
+			}
+			tag_bool_size = false
+			for _, k := range tag_size_split {
+				if v.size == k || k == "" {
+					tag_bool_size = true
+				}
+			}
+			tag_bool_dresses_length = false
+			for _, k := range tag_dresses_length_split {
+				if v.dresses_length == k || k == "" {
+					tag_bool_dresses_length = true
+				}
+			}
+			tag_bool_fabric = false
+			for _, k := range tag_fabric_type_split {
+				if v.fabric_type == k || k == "" {
+					tag_bool_fabric = true
+				}
+			}
+			tag_bool_quality_level = false
+			for _, k := range tag_quality_level_split {
+				if v.quality_level == k || k == "" {
+					tag_bool_quality_level = true
+				}
+			}
+			if tag_bool_color && tag_bool_size && tag_bool_dresses_length && tag_bool_fabric && tag_bool_quality_level {
+				tag_neckline[v.neckline] = tag_neckline[v.neckline] + 1
+			}
+
+		}
+		//fabric
+		if v.fabric_type != "" {
+			tag_bool_color = false
+			for _, k := range tag_color_split {
+				if v.color == k || k == "" {
+					tag_bool_color = true
+				}
+			}
+			tag_bool_size = false
+			for _, k := range tag_size_split {
+				if v.size == k || k == "" {
+					tag_bool_size = true
+				}
+			}
+			tag_bool_dresses_length = false
+			for _, k := range tag_dresses_length_split {
+				if v.dresses_length == k || k == "" {
+					tag_bool_dresses_length = true
+				}
+			}
+			tag_bool_neckline = false
+			for _, k := range tag_neckline_split {
+				if v.neckline == k || k == "" {
+					tag_bool_neckline = true
+				}
+			}
+			tag_bool_quality_level = false
+			for _, k := range tag_quality_level_split {
+				if v.quality_level == k || k == "" {
+					tag_bool_quality_level = true
+				}
+			}
+			if tag_bool_color && tag_bool_size && tag_bool_dresses_length && tag_bool_neckline && tag_bool_quality_level {
+				tag_fabric_type[v.fabric_type] = tag_fabric_type[v.fabric_type] + 1
+			}
+
+		}
+		//fabric
+		if v.quality_level != "" {
+			tag_bool_color = false
+			for _, k := range tag_color_split {
+				if v.color == k || k == "" {
+					tag_bool_color = true
+				}
+			}
+			tag_bool_size = false
+			for _, k := range tag_size_split {
+				if v.size == k || k == "" {
+					tag_bool_size = true
+				}
+			}
+			tag_bool_dresses_length = false
+			for _, k := range tag_dresses_length_split {
+				if v.dresses_length == k || k == "" {
+					tag_bool_dresses_length = true
+				}
+			}
+			tag_bool_neckline = false
+			for _, k := range tag_neckline_split {
+				if v.neckline == k || k == "" {
+					tag_bool_neckline = true
+				}
+			}
+			tag_bool_fabric = false
+			for _, k := range tag_fabric_type_split {
+				if v.fabric_type == k || k == "" {
+					tag_bool_fabric = true
+				}
+			}
+			if tag_bool_color && tag_bool_size && tag_bool_dresses_length && tag_bool_neckline && tag_bool_fabric {
+				tag_quality_level[v.quality_level] = tag_quality_level[v.quality_level] + 1
+			}
+
 		}
 
 	}
-	th["color"] = th1
-	//th["dresses_length"] = th2
-	th["size"] = th3
-	fmt.Println(th)
+	th["color"] = tag_color
+	th["dresses_length"] = tag_dresses_length
+	th["size"] = tag_size
+	th["neckline"] = tag_neckline
+	th["quality_level"] = tag_quality_level
+	th["fabric_type"] = tag_fabric_type
+
+	str, err := json.Marshal(th)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	return string(str)
+	//_, _ := io.WriteString(w, str)
+	//fmt.Println(th)
 
 }
 func checkErr(err error) {
